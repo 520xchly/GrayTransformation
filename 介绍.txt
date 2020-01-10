@@ -1,0 +1,20 @@
+3.YUV420 数据格式到底是什么？
+YUV420是一类数据格式的总称。不仅仅只是下面给出的 ：
+
+YUV420有平面格式(Planar)，即Y、U、V是分开存储的，其中Y为 width*height，而U、V合占Y的一半，该种格式每个像素占12比特。根据U、V的顺序，分出2种格式，U前V后即YUV420P，也叫 I420。V前U后，叫YV12(YV表示Y后面跟着V，12表示12bit)。
+
+还有一种半平面格式(Semi-planar)，即Y单独占一块地 方，其后U、V紧挨着排在一起，根据U、V的顺序，又有2种，( U前V后叫NV12，在国内好像很多人叫它为YUV420SP格式)；V前U后叫 NV21。
+
+I420: YYYYYYYY UU VV??? =>YUV420P
+
+YV12: YYYYYYYY VV UU??? =>
+
+NV12: YYYYYYYY UVUV???? =>YUV420SP
+
+NV21: YYYYYYYY VUVU???? =>
+
+所以由此得出：YUV420 数据在内存中的长度是 width * hight * 3 / 2 (Y占1、UV占0.5)
+————————————————
+版权声明：本文为CSDN博主「*八步赶蝉*」的原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/qq_38261174/article/details/82926171
+
