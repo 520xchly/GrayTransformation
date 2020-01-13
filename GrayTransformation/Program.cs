@@ -15,124 +15,199 @@ namespace GrayTransformation
 {
     public class Program
     {
+        private static string deskPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
         public static void Main(string[] args)
         {
-            Console.WriteLine("123");
-            Console.WriteLine(args != null ? String.Join(",", args) : "");
-            string deskPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-            string imagePath = deskPath + "/2234.png";
-            Bitmap bitmap = new Bitmap(imagePath);
-            int width = bitmap.Width, height = bitmap.Height;
-            if (bitmap.PixelFormat == PixelFormat.Format24bppRgb || bitmap.PixelFormat == PixelFormat.Format32bppRgb)
+            Console.WriteLine(@"使用说明：
+1、xxx.exe cmd->gray imagepath   -- 在桌面生成 【 /grayxxx.png(.jpg等)灰度图 】【 /grayReversexxx.png(.jpg等)灰度反转图】【 / b2grayxxx.png(.jpg)灰度二值化图】 【支持gif】
+2、xxx.exe cmd->togif imagepath1 imagepath2 imagepath3 --【在桌面组装生成多张图片成为1234.gif，以空格分隔多张图片路径】
+3、xxx.exe cmd->quit -- 退出
+                ");
+
+            while (true)
             {
-                int grayAverage = 0;
-                for (int y = 0; y < height; y++)
+                try
                 {
-                    for (int x = 0; x < width; x++)
+                    string strs = Console.ReadLine();
+                    List<string> strArray = new List<string>();
+                    if (!string.IsNullOrWhiteSpace(strs))
                     {
-                        Color grayPixel = Rgb2GrayYUV(bitmap.GetPixel(x, y));
-                        grayAverage += grayPixel.R;
-                        bitmap.SetPixel(x, y, grayPixel);
-                    }
-                }
-                bitmap.Save(deskPath + "/gray1234.png");
-                Bitmap b2 = (Bitmap)bitmap.Clone();
-                for (int y = 0; y < height; y++)
-                {
-                    for (int x = 0; x < width; x++)
-                    {
-                        Color grayReversePixel = GrayRevers(bitmap.GetPixel(x, y));
-                        bitmap.SetPixel(x, y, grayReversePixel);
-                    }
-                }
-                bitmap.Save(deskPath + "/grayReverse1234.png");
-                //
-                grayAverage = grayAverage / (width * height);
-                for (int y = 0; y < height; y++)
-                {
-                    for (int x = 0; x < width; x++)
-                    {
-                        Color grayPixel = B2Gray(b2.GetPixel(x, y), grayAverage);
-                        b2.SetPixel(x, y, grayPixel);
-                    }
-                }
-                b2.Save(deskPath + "/b2gray.png");
-            }
-            else if (bitmap.PixelFormat == PixelFormat.Format8bppIndexed || bitmap.PixelFormat == PixelFormat.Format1bppIndexed || bitmap.PixelFormat == PixelFormat.Format4bppIndexed)
-            {
-                ColorPalette grayPalette = bitmap.Palette;
-                ColorPalette grayReversePalette = bitmap.Palette;
-                ColorPalette b2Palette = bitmap.Palette;
-                int grayAverage = 0;
-                for (int i = 0; i < 256; i++)
-                {
-                    grayAverage += i;
-                    grayPalette.Entries[i] = Color.FromArgb(i, i, i);
-                    grayReversePalette.Entries[i] = Color.FromArgb(255 - i, 255 - i, 255 - i);
-                }
-                bitmap.Palette = grayPalette;
-                bitmap.Save(deskPath + "/gray1234.png");
-                bitmap.Palette = grayReversePalette;
-                bitmap.Save(deskPath + "/grayReverse1234.png");
-                //
-                grayAverage = grayAverage / (bitmap.Width * bitmap.Height);
-                for (int i = 0; i < 256; i++)
-                {
-                    b2Palette.Entries[i] = B2Gray(Color.FromArgb(i, i, i), grayAverage);
-                }
-                bitmap.Palette = b2Palette;
-                bitmap.Save(deskPath + "/b2gray.png");
-            }
-            else if (bitmap.PixelFormat == PixelFormat.Format32bppArgb)
-            {
-                if (ImageAnimator.CanAnimate(bitmap))
-                {
-                    FrameDimension frameDimension = new FrameDimension(bitmap.FrameDimensionsList[0]);
-                    int fdCount = bitmap.GetFrameCount(frameDimension);
-                    for (int i = 0; i < fdCount; i += 5)
-                    {
-                        bitmap.SelectActiveFrame(frameDimension, i);
-                        bitmap.Save(deskPath + $"/giftest/gif{i}.png", ImageFormat.Png);
-                        for (int y = 0; y < height; y++)
+                        strs.Split(" ").ToList().ForEach(str =>
                         {
-                            for (int x = 0; x < width; x++)
+                            if (!string.IsNullOrWhiteSpace(str))
                             {
-                                Color grayPixel = Rgb2GrayYUV(bitmap.GetPixel(x, y));
-                                bitmap.SetPixel(x, y, grayPixel);
+                                strArray.Add(str);
+                            }
+                        });
+                        if (strArray != null && strArray.Count > 0)
+                        {
+                            int cmdCount = strArray.Count;
+                            string operation = strArray[0];
+
+                            if (operation.Equals("gray", StringComparison.CurrentCultureIgnoreCase))
+                            {
+                                string path = strArray[1];
+                                string oldBmpName = Path.GetFileName(path);
+                                Bitmap bmp = new Bitmap(path);
+                                int width = bmp.Width, height = bmp.Height;
+                                if (bmp.PixelFormat == PixelFormat.Format24bppRgb || bmp.PixelFormat == PixelFormat.Format32bppRgb)
+                                {
+                                    RGBCreateGrayBitMap(bmp, oldBmpName, width, height);
+                                }
+                                else if (bmp.PixelFormat == PixelFormat.Format8bppIndexed || bmp.PixelFormat == PixelFormat.Format1bppIndexed || bmp.PixelFormat == PixelFormat.Format4bppIndexed)
+                                {
+                                    IndexCreateGrayBitMap(bmp, oldBmpName, width, height);
+                                }
+                                else if (bmp.PixelFormat == PixelFormat.Format32bppArgb)
+                                {
+                                    GifCreateGrayBitMap(bmp, oldBmpName, width, height);
+                                }
+                                bmp = null;
+                                Console.WriteLine("转换完成");
+                                continue;
+                            }
+                            else if (operation.Equals("togif", StringComparison.CurrentCultureIgnoreCase))
+                            {
+                                strArray.RemoveAt(0);
+                                if (strArray.Count != 0)
+                                {
+                                    ToGitBitmap(strArray);
+                                    Console.WriteLine("转换完成");
+                                    continue;
+                                }
+                            }
+                            else if (operation.Equals("quit", StringComparison.CurrentCultureIgnoreCase))
+                            {
+                                break;
                             }
                         }
-                        bitmap.Save(deskPath + $"/giftest/grayGif{i}.png", ImageFormat.Png);
-                        for (int y = 0; y < height; y++)
-                        {
-                            for (int x = 0; x < width; x++)
-                            {
-                                Color grayReversePixel = GrayRevers(bitmap.GetPixel(x, y));
-                                bitmap.SetPixel(x, y, grayReversePixel);
-                            }
-                        }
-                        bitmap.Save(deskPath + $"/giftest/ReverseGrayGif{i}.png", ImageFormat.Png);
                     }
+                    Console.WriteLine("该操作无效");
                 }
-                //http://files.cnblogs.com/bomo/Gif.Components.zip
-                //List<string> pngfiles = new List<string>();
-                //for (int n = 0; n < 160; n += 5)
-                //{
-                //    string filePath = deskPath + $"/giftest/grayGif{n}.png";
-                //    pngfiles.Add(filePath);
-                //}
-                //AnimatedGifEncoder encoder = new AnimatedGifEncoder();
-                //encoder.Start(deskPath + "/giftest/生成gif.gif");
-                //encoder.SetDelay(1000);
-                //encoder.SetRepeat(0);// 0 repeat  -1 norepeat
-                //pngfiles.ForEach(file =>
-                //{
-                //    encoder.AddFrame(Bitmap.FromFile(file));
-                //});
-                //encoder.Finish();
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"错误：{ex.Message}");
+                    continue;
+                }
             }
 
-            bitmap = null;
-            //CreateWebHostBuilder(args).Build().Run();
+            Console.WriteLine("输入回车键退出图片灰度转换程序！");
+            Console.ReadLine();
+        }
+
+
+
+        //由多张bitmapPaht -> 生成gif
+        private static void ToGitBitmap(List<string> bitmapPath)
+        {
+            //http://files.cnblogs.com/bomo/Gif.Components.zip
+            AnimatedGifEncoder encoder = new AnimatedGifEncoder();
+            encoder.Start(deskPath + "/test.gif");
+            encoder.SetDelay(1000);
+            encoder.SetRepeat(0);// 0 repeat  -1 norepeat
+            bitmapPath.ForEach(file =>
+            {
+                encoder.AddFrame(Bitmap.FromFile(file));
+            });
+            encoder.Finish();
+            encoder = null;
+        }
+
+        //该格式常见于gif
+        private static void GifCreateGrayBitMap(Bitmap bitmap, string oldBmpName, int width, int height)
+        {
+            if (ImageAnimator.CanAnimate(bitmap))
+            {
+                FrameDimension frameDimension = new FrameDimension(bitmap.FrameDimensionsList[0]);
+                int fdCount = bitmap.GetFrameCount(frameDimension);
+                for (int i = 0; i < fdCount; i += 5)
+                {
+                    bitmap.SelectActiveFrame(frameDimension, i);
+                    bitmap.Save(deskPath + $"/giftest/gif{i}.png", ImageFormat.Png);
+                    for (int y = 0; y < height; y++)
+                    {
+                        for (int x = 0; x < width; x++)
+                        {
+                            Color grayPixel = Rgb2GrayYUV(bitmap.GetPixel(x, y));
+                            bitmap.SetPixel(x, y, grayPixel);
+                        }
+                    }
+                    bitmap.Save(deskPath + $"/giftest/grayGif{i}.png", ImageFormat.Png);
+                    for (int y = 0; y < height; y++)
+                    {
+                        for (int x = 0; x < width; x++)
+                        {
+                            Color grayReversePixel = GrayRevers(bitmap.GetPixel(x, y));
+                            bitmap.SetPixel(x, y, grayReversePixel);
+                        }
+                    }
+                    bitmap.Save(deskPath + $"/giftest/ReverseGrayGif{i}.png", ImageFormat.Png);
+                }
+            }
+        }
+
+        //索引格式生成灰度图
+        private static void IndexCreateGrayBitMap(Bitmap bitmap, string oldBmpName, int width, int height)
+        {
+            ColorPalette grayPalette = bitmap.Palette;
+            ColorPalette grayReversePalette = bitmap.Palette;
+            ColorPalette b2Palette = bitmap.Palette;
+            int grayAverage = 0;
+            for (int i = 0; i < 256; i++)
+            {
+                grayAverage += i;
+                grayPalette.Entries[i] = Color.FromArgb(i, i, i);
+                grayReversePalette.Entries[i] = Color.FromArgb(255 - i, 255 - i, 255 - i);
+            }
+            bitmap.Palette = grayPalette;
+            bitmap.Save(deskPath + $"/gray{oldBmpName}");
+            bitmap.Palette = grayReversePalette;
+            bitmap.Save(deskPath + $"/grayReverse{oldBmpName}");
+            //
+            grayAverage = grayAverage / (bitmap.Width * bitmap.Height);
+            for (int i = 0; i < 256; i++)
+            {
+                b2Palette.Entries[i] = B2Gray(Color.FromArgb(i, i, i), grayAverage);
+            }
+            bitmap.Palette = b2Palette;
+            bitmap.Save(deskPath + $"/b2gray{oldBmpName}");
+        }
+
+        //rgb格式生成灰度图
+        private static void RGBCreateGrayBitMap(Bitmap bmp, string oldBmpName, int width, int height)
+        {
+            int grayAverage = 0;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    Color grayPixel = Rgb2GrayYUV(bmp.GetPixel(x, y));
+                    grayAverage += grayPixel.R;
+                    bmp.SetPixel(x, y, grayPixel);
+                }
+            }
+            bmp.Save(deskPath + $"/gray{oldBmpName}");
+            Bitmap b2 = (Bitmap)bmp.Clone();
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    Color grayReversePixel = GrayRevers(bmp.GetPixel(x, y));
+                    bmp.SetPixel(x, y, grayReversePixel);
+                }
+            }
+            bmp.Save(deskPath + $"/grayReverse{oldBmpName}");
+            //
+            grayAverage = grayAverage / (width * height);
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    Color grayPixel = B2Gray(b2.GetPixel(x, y), grayAverage);
+                    b2.SetPixel(x, y, grayPixel);
+                }
+            }
+            b2.Save(deskPath + $"/b2gray{oldBmpName}");
         }
 
         private static Color Rgb2GrayYUV(Color rgbPixel)
@@ -161,8 +236,6 @@ namespace GrayTransformation
             rgb24Bitmap.Save("/测试坐标.png");
             rgb24Bitmap = null;
         }
-
-        private static void DoNothing() { }
 
         public static IWebHostBuilder CreateWebHostBuilder(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
